@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  html,body{margin:0;padding:0;height:100%;background:#f6f5f2;color:#1d1c19;font-family:'Golos Text',sans-serif;}
+  a{color:oklch(0.51 0.17 270);text-decoration:none;} a:hover{color:oklch(0.42 0.17 270);text-decoration:underline;}
+  *{box-sizing:border-box;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+  @keyframes blink{0%,100%{opacity:1;}50%{opacity:0.35;}}
+  ::placeholder{color:#a39e93;}
+</style>
+</helmet>
+<div style="display:flex;height:100vh;overflow:hidden;">
+  <div style="width:248px;flex-shrink:0;background:#fcfbf9;border-right:1px solid #e7e4dd;display:flex;flex-direction:column;padding:20px 14px;gap:4px;">
+    <div style="display:flex;align-items:center;gap:10px;padding:4px 10px 18px;">
+      <svg width="30" height="30" viewBox="0 0 30 30" fill="none" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0;">
+        <rect width="30" height="30" rx="8" fill="oklch(0.51 0.17 270)"></rect>
+        <path d="M15 6 L16.9 13.1 L24 15 L16.9 16.9 L15 24 L13.1 16.9 L6 15 L13.1 13.1 Z" fill="#fff"></path>
+        <circle cx="22.5" cy="7.5" r="1.6" fill="#fff" opacity="0.85"></circle>
+      </svg>
+      <div style="font-weight:700;font-size:17px;letter-spacing:-0.02em;">AI-Helper</div>
+    </div>
+    <div onClick="{{ goChat }}" style="{{ navChatStyle }}" style-hover="background:#f1efe9;">✦&nbsp;&nbsp;New task</div>
+    <div onClick="{{ goSubjects }}" style="{{ navSubjectsStyle }}" style-hover="background:#f1efe9;">▤&nbsp;&nbsp;Subjects</div>
+    <div onClick="{{ goHistory }}" style="{{ navHistoryStyle }}" style-hover="background:#f1efe9;">◷&nbsp;&nbsp;History</div>
+    <div style="margin-top:22px;padding:0 10px;font-size:11px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:#a39e93;">Subjects</div>
+    <div style="display:flex;flex-direction:column;gap:2px;margin-top:6px;overflow:auto;">
+      <sc-for list="{{ subjects }}" as="s" hint-placeholder-count="4">
+        <div onClick="{{ s.open }}" style="display:flex;align-items:center;justify-content:space-between;padding:7px 10px;border-radius:8px;font-size:13.5px;color:#4a463d;cursor:pointer;" style-hover="background:#f1efe9;">
+          <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ s.name }}</span>
+          <span style="font-size:11.5px;color:#a39e93;font-family:'JetBrains Mono',monospace;">{{ s.count }}</span>
+        </div>
+      </sc-for>
+    </div>
+    <div style="margin-top:auto;display:flex;align-items:center;gap:10px;padding:10px;border-top:1px solid #eeebe4;">
+      <div style="width:30px;height:30px;border-radius:50%;background:#e7e4dd;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;color:#6f6b61;">AK</div>
+      <div style="line-height:1.25;">
+        <div style="font-size:13px;font-weight:600;">Artem K.</div>
+        <div style="font-size:11.5px;color:#a39e93;">3rd year · CS</div>
+      </div>
+    </div>
+  </div>
+
+  <sc-if value="{{ isChat }}" hint-placeholder-val="{{ true }}">
+  <div style="flex:1;display:flex;flex-direction:column;min-width:0;">
+    <div style="padding:16px 32px;border-bottom:1px solid #e7e4dd;background:#fcfbf9;display:flex;align-items:baseline;gap:12px;">
+      <div style="font-size:16px;font-weight:700;">New task</div>
+      <div style="font-size:13px;color:#a39e93;">send an assignment — get a finished file back</div>
+    </div>
+    <div ref="{{ chatRef }}" style="flex:1;overflow-y:auto;padding:28px 32px;display:flex;flex-direction:column;gap:18px;">
+      <sc-for list="{{ messages }}" as="m" hint-placeholder-count="3">
+        <div style="display:flex;flex-direction:column;">
+          <sc-if value="{{ m.isUser }}" hint-placeholder-val="{{ false }}">
+            <div style="align-self:flex-end;max-width:560px;background:oklch(0.51 0.17 270);color:#fff;padding:12px 16px;border-radius:14px 14px 4px 14px;font-size:14.5px;line-height:1.5;white-space:pre-wrap;">{{ m.text }}</div>
+            <div style="align-self:flex-end;font-size:11.5px;color:#a39e93;margin-top:5px;">{{ m.meta }}</div>
+          </sc-if>
+          <sc-if value="{{ m.isPipeline }}" hint-placeholder-val="{{ false }}">
+            <div style="align-self:flex-start;width:420px;max-width:100%;background:#fff;border:1px solid #e7e4dd;border-radius:14px;padding:16px 18px;">
+              <div style="font-size:12px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:#a39e93;margin-bottom:12px;">{{ m.title }}</div>
+              <div style="display:flex;flex-direction:column;gap:10px;">
+                <sc-for list="{{ m.steps }}" as="st" hint-placeholder-count="4">
+                  <div style="display:flex;align-items:center;gap:10px;">
+                    <div style="{{ st.dotStyle }}">{{ st.dotChar }}</div>
+                    <div style="{{ st.textStyle }}">{{ st.name }}</div>
+                    <div style="margin-left:auto;font-family:'JetBrains Mono',monospace;font-size:11.5px;color:#a39e93;">{{ st.note }}</div>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </sc-if>
+          <sc-if value="{{ m.isResult }}" hint-placeholder-val="{{ false }}">
+            <div style="align-self:flex-start;width:420px;max-width:100%;background:#fff;border:1px solid #e7e4dd;border-radius:14px;overflow:hidden;">
+              <div style="padding:14px 18px;display:flex;align-items:center;gap:12px;border-bottom:1px solid #eeebe4;">
+                <div style="width:38px;height:38px;border-radius:10px;background:oklch(0.95 0.03 270);display:flex;align-items:center;justify-content:center;font-size:17px;">{{ m.icon }}</div>
+                <div style="line-height:1.3;">
+                  <div style="font-weight:600;font-size:14.5px;font-family:'JetBrains Mono',monospace;">{{ m.fileName }}</div>
+                  <div style="font-size:12px;color:#a39e93;">{{ m.fileMeta }}</div>
+                </div>
+              </div>
+              <div style="padding:12px 18px;display:flex;flex-direction:column;gap:6px;">
+                <sc-for list="{{ m.files }}" as="f" hint-placeholder-count="3">
+                  <div style="display:flex;justify-content:space-between;font-size:12.5px;font-family:'JetBrains Mono',monospace;color:#4a463d;">
+                    <span>{{ f.name }}</span><span style="color:#a39e93;">{{ f.size }}</span>
+                  </div>
+                </sc-for>
+              </div>
+              <div style="padding:12px 18px;border-top:1px solid #eeebe4;display:flex;gap:10px;">
+                <div style="flex:1;text-align:center;background:oklch(0.51 0.17 270);color:#fff;font-weight:600;font-size:13.5px;padding:9px 0;border-radius:9px;cursor:pointer;" style-hover="background:oklch(0.45 0.17 270);">Download archive</div>
+                <div style="flex:1;text-align:center;border:1px solid #e7e4dd;color:#4a463d;font-weight:600;font-size:13.5px;padding:9px 0;border-radius:9px;cursor:pointer;" style-hover="background:#f1efe9;">Test report</div>
+              </div>
+            </div>
+          </sc-if>
+        </div>
+      </sc-for>
+    </div>
+    <div style="padding:18px 32px 22px;border-top:1px solid #e7e4dd;background:#fcfbf9;">
+      <div style="max-width:760px;display:flex;flex-direction:column;gap:10px;">
+        <div style="display:flex;gap:8px;">
+          <select onChange="{{ setSubject }}" style="border:1px solid #e7e4dd;background:#fff;border-radius:8px;padding:7px 10px;font-size:13px;font-family:'Golos Text',sans-serif;color:#4a463d;">
+            <sc-for list="{{ subjectOptions }}" as="o" hint-placeholder-count="3"><option value="{{ o.name }}">{{ o.name }}</option></sc-for>
+          </select>
+          <div onClick="{{ pickCode }}" style="{{ typeCodeStyle }}">Code</div>
+          <div onClick="{{ pickDoc }}" style="{{ typeDocStyle }}">Document</div>
+          <div style="margin-left:auto;align-self:center;font-size:12px;color:#a39e93;">📎 attach guidelines if needed</div>
+        </div>
+        <div style="display:flex;gap:10px;align-items:flex-end;">
+          <textarea value="{{ draft }}" onChange="{{ setDraft }}" rows="{{ 3 }}" placeholder="Paste the assignment: what to build, which language, professor's requirements…" style="flex:1;resize:none;border:1px solid #e7e4dd;border-radius:12px;padding:12px 14px;font-size:14px;font-family:'Golos Text',sans-serif;line-height:1.5;outline:none;background:#fff;"></textarea>
+          <div onClick="{{ send }}" style="background:oklch(0.51 0.17 270);color:#fff;font-weight:600;font-size:14px;padding:11px 22px;border-radius:11px;cursor:pointer;white-space:nowrap;" style-hover="background:oklch(0.45 0.17 270);">Solve →</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  </sc-if>
+
+  <sc-if value="{{ isSubjects }}" hint-placeholder-val="{{ false }}">
+  <div style="flex:1;overflow-y:auto;padding:28px 36px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;max-width:980px;">
+      <div style="font-size:22px;font-weight:700;">Subjects</div>
+      <div onClick="{{ addSubject }}" style="border:1px solid #e7e4dd;background:#fff;border-radius:10px;padding:8px 16px;font-size:13.5px;font-weight:600;cursor:pointer;" style-hover="background:#f1efe9;">+ Add subject</div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;margin-top:22px;max-width:980px;">
+      <sc-for list="{{ subjects }}" as="s" hint-placeholder-count="4">
+        <div onClick="{{ s.open }}" style="background:#fff;border:1px solid #e7e4dd;border-radius:14px;padding:18px;cursor:pointer;display:flex;flex-direction:column;gap:10px;" style-hover="border-color:oklch(0.51 0.17 270);">
+          <div style="font-weight:700;font-size:15.5px;">{{ s.name }}</div>
+          <div style="font-size:13px;color:#6f6b61;">{{ s.teacher }}</div>
+          <div style="display:flex;gap:14px;margin-top:4px;font-size:12.5px;color:#a39e93;">
+            <span><b style="color:#1d1c19;">{{ s.count }}</b> tasks</span>
+            <span>last: {{ s.last }}</span>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+  </sc-if>
+
+  <sc-if value="{{ isHistory }}" hint-placeholder-val="{{ false }}">
+  <div style="flex:1;overflow-y:auto;padding:28px 36px;">
+    <div style="font-size:22px;font-weight:700;">Task history</div>
+    <div style="display:flex;gap:8px;margin-top:16px;max-width:980px;flex-wrap:wrap;align-items:center;">
+      <select onChange="{{ setFilterSubject }}" value="{{ filterSubjectVal }}" style="border:1px solid #e7e4dd;background:#fff;border-radius:8px;padding:7px 10px;font-size:13px;font-family:'Golos Text',sans-serif;color:#4a463d;">
+        <option value="all">All subjects</option>
+        <sc-for list="{{ subjectOptions }}" as="o" hint-placeholder-count="3"><option value="{{ o.name }}">{{ o.name }}</option></sc-for>
+      </select>
+      <select onChange="{{ setFilterPeriod }}" value="{{ filterPeriodVal }}" style="border:1px solid #e7e4dd;background:#fff;border-radius:8px;padding:7px 10px;font-size:13px;font-family:'Golos Text',sans-serif;color:#4a463d;">
+        <option value="all">Any time</option>
+        <option value="7">Last 7 days</option>
+        <option value="30">Last 30 days</option>
+        <option value="90">Last 3 months</option>
+      </select>
+      <div style="display:flex;gap:6px;">
+        <div onClick="{{ statusAll }}" style="{{ statusAllStyle }}">All</div>
+        <div onClick="{{ statusDone }}" style="{{ statusDoneStyle }}">Done</div>
+        <div onClick="{{ statusFailed }}" style="{{ statusFailedStyle }}">Failed</div>
+      </div>
+      <div style="display:flex;gap:6px;margin-left:8px;">
+        <div onClick="{{ typeAllF }}" style="{{ typeAllFStyle }}">All types</div>
+        <div onClick="{{ typeCodeF }}" style="{{ typeCodeFStyle }}">Code</div>
+        <div onClick="{{ typeDocF }}" style="{{ typeDocFStyle }}">Documents</div>
+      </div>
+      <sc-if value="{{ hasFilters }}" hint-placeholder-val="{{ false }}">
+        <div onClick="{{ clearFilters }}" style="margin-left:auto;font-size:12.5px;color:oklch(0.51 0.17 270);cursor:pointer;font-weight:600;" style-hover="text-decoration:underline;">✕ Clear filters</div>
+      </sc-if>
+    </div>
+    <div style="margin-top:14px;font-size:12.5px;color:#a39e93;">{{ resultCount }}</div>
+    <div style="margin-top:10px;max-width:980px;background:#fff;border:1px solid #e7e4dd;border-radius:14px;overflow:hidden;">
+      <div style="display:grid;grid-template-columns:minmax(180px,1fr) 140px 90px 90px 120px;gap:12px;padding:11px 18px;font-size:11.5px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:#a39e93;border-bottom:1px solid #eeebe4;">
+        <div>Task</div><div>Subject</div><div>Date</div><div>Status</div><div>File</div>
+      </div>
+      <sc-for list="{{ historyRows }}" as="h" hint-placeholder-count="5">
+        <div style="display:grid;grid-template-columns:minmax(180px,1fr) 140px 90px 90px 120px;gap:12px;padding:13px 18px;font-size:13.5px;border-bottom:1px solid #f3f1ec;align-items:center;" style-hover="background:#faf9f6;">
+          <div style="font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ h.title }}</div>
+          <div style="color:#6f6b61;">{{ h.subject }}</div>
+          <div style="color:#a39e93;font-size:12.5px;">{{ h.date }}</div>
+          <div><span style="{{ h.statusStyle }}">{{ h.status }}</span></div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:12px;"><a href="#">{{ h.file }}</a></div>
+        </div>
+      </sc-for>
+      <sc-if value="{{ noResults }}" hint-placeholder-val="{{ false }}">
+        <div style="padding:36px;text-align:center;color:#a39e93;font-size:13.5px;">Nothing matches these filters</div>
+      </sc-if>
+    </div>
+  </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;productName&quot;: {&quot;editor&quot;: &quot;text&quot;, &quot;default&quot;: &quot;AI-Helper&quot;, &quot;tsType&quot;: &quot;string&quot;}}">
+class Component extends DCLogic {
+  state = {
+    view: 'chat', draft: '', taskType: 'code', subject: 'C# Programming',
+    fSubject: 'all', fPeriod: 'all', fStatus: 'all', fType: 'all',
+    subjects: [
+      {name:'C# Programming', teacher:'Prof. E. Smirnova', count:4, last:'yesterday'},
+      {name:'Databases', teacher:'D. Kovalev', count:2, last:'Aug 12'},
+      {name:'Economics', teacher:'Prof. N. Lebedeva', count:3, last:'Aug 6'},
+      {name:'Philosophy', teacher:'P. Orlov', count:1, last:'Jul 29'},
+    ],
+    history: [
+      {title:'Matrix calculator (console app)', subject:'C# Programming', date:'Aug 17', days:1, type:'code', status:'done', file:'matrix_calc.zip'},
+      {title:'ER diagram & SQL schema "Library"', subject:'Databases', date:'Aug 12', days:6, type:'code', status:'done', file:'library_db.zip'},
+      {title:'Essay: inflation in 2020–2025', subject:'Economics', date:'Aug 6', days:12, type:'doc', status:'done', file:'essay.docx'},
+      {title:'Lab #3: LINQ queries', subject:'C# Programming', date:'Aug 2', days:16, type:'code', status:'failed', file:'—'},
+      {title:'Essay: philosophy of technology', subject:'Philosophy', date:'Jul 29', days:20, type:'doc', status:'done', file:'essay_phil.docx'},
+      {title:'Report: market structures overview', subject:'Economics', date:'Jun 30', days:49, type:'doc', status:'done', file:'report.docx'},
+      {title:'Lab #1: OOP basics, class hierarchy', subject:'C# Programming', date:'May 20', days:90, type:'code', status:'done', file:'lab1_oop.zip'},
+    ],
+    messages: [
+      {kind:'user', text:'Assignment: write a C# console app — matrix calculator (addition, multiplication, transpose). Requirements: .NET 8, unit tests, README.', meta:'C# Programming · yesterday, 14:02'},
+      {kind:'pipeline', title:'Execution pipeline', steps:[
+        {name:'Analyzing assignment', state:'done', note:'2s'},
+        {name:'Generating code', state:'done', note:'18s'},
+        {name:'Compiling (dotnet build)', state:'done', note:'ok'},
+        {name:'Running tests', state:'done', note:'12/12'},
+        {name:'Packaging', state:'done', note:'zip'},
+      ]},
+      {kind:'result', icon:'🗜️', fileName:'matrix_calc.zip', fileMeta:'ready · compiled & tested · 46 KB', files:[
+        {name:'Program.cs', size:'3.1 KB'},{name:'Matrix.cs', size:'2.4 KB'},{name:'MatrixTests.cs', size:'1.8 KB'},{name:'README.md', size:'0.9 KB'},
+      ]},
+    ],
+  };
+  scrollChat(){ const el = this._chatEl; if (el) el.scrollTop = el.scrollHeight; }
+  componentDidUpdate(){ this.scrollChat(); }
+  nav(v, filter){ this.setState({view:v, fSubject: filter ?? 'all'}); }
+  navStyle(active){
+    return 'display:flex;align-items:center;padding:9px 10px;border-radius:9px;font-size:14px;font-weight:600;cursor:pointer;' +
+      (active ? 'background:oklch(0.95 0.03 270);color:oklch(0.4 0.17 270);' : 'color:#4a463d;');
+  }
+  typeStyle(active){
+    return 'align-self:center;padding:7px 14px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;' +
+      (active ? 'background:oklch(0.51 0.17 270);color:#fff;' : 'border:1px solid #e7e4dd;background:#fff;color:#6f6b61;');
+  }
+  pillStyle(active){
+    return 'padding:7px 13px;border-radius:99px;font-size:12.5px;font-weight:600;cursor:pointer;' +
+      (active ? 'background:#1d1c19;color:#fff;' : 'border:1px solid #e7e4dd;background:#fff;color:#6f6b61;');
+  }
+  send = () => {
+    const text = this.state.draft.trim();
+    if (!text || this._running) return;
+    this._running = true;
+    const isCode = this.state.taskType === 'code';
+    const steps = (isCode
+      ? ['Analyzing assignment','Generating code','Compiling (dotnet build)','Running tests','Packaging']
+      : ['Analyzing topic','Outlining document','Writing content','Formatting & styling','Exporting to .docx']
+    ).map(n => ({name:n, state:'pending', note:''}));
+    const now = new Date();
+    const meta = this.state.subject + ' · today, ' + now.getHours() + ':' + String(now.getMinutes()).padStart(2,'0');
+    const msgs = this.state.messages.concat([{kind:'user', text, meta}, {kind:'pipeline', title:'Execution pipeline', steps}]);
+    this.setState({messages:msgs, draft:''});
+    let i = 0;
+    const notes = isCode ? ['3s','21s','ok','12/12','zip'] : ['2s','5s','34s','ok','docx'];
+    const tick = () => {
+      const messages = this.state.messages.slice();
+      const pipe = {...messages[messages.length-1]};
+      const st = pipe.steps.map(s => ({...s}));
+      if (i > 0) { st[i-1].state = 'done'; st[i-1].note = notes[i-1]; }
+      if (i < st.length) { st[i].state = 'active'; }
+      pipe.steps = st;
+      messages[messages.length-1] = pipe;
+      this.setState({messages});
+      i++;
+      if (i <= st.length) { setTimeout(tick, 900); }
+      else { this.finish(text, isCode); }
+    };
+    setTimeout(tick, 400);
+  };
+  finish(text, isCode){
+    this._running = false;
+    const fileName = isCode ? 'solution.zip' : 'report.docx';
+    const result = isCode
+      ? {kind:'result', icon:'🗜️', fileName, fileMeta:'ready · compiled & tested · 52 KB', files:[
+          {name:'Program.cs', size:'4.2 KB'},{name:'Solution.cs', size:'3.0 KB'},{name:'Tests.cs', size:'2.1 KB'},{name:'README.md', size:'1.0 KB'}]}
+      : {kind:'result', icon:'📄', fileName, fileMeta:'ready · fully formatted · 214 KB', files:[
+          {name:'Title page', size:'p. 1'},{name:'Contents', size:'p. 2'},{name:'Main body', size:'pp. 3–14'},{name:'References', size:'p. 15'}]};
+    const now = new Date();
+    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    const hist = [{title: text.length > 48 ? text.slice(0,48)+'…' : text, subject:this.state.subject,
+      date: months[now.getMonth()]+' '+now.getDate(), days:0, type: isCode?'code':'doc', status:'done', file:fileName}].concat(this.state.history);
+    const subjects = this.state.subjects.map(s => s.name === this.state.subject ? {...s, count:s.count+1, last:'just now'} : s);
+    this.setState({messages: this.state.messages.concat([result]), history: hist, subjects});
+  }
+  addSubject = () => {
+    const name = window.prompt('Subject name:');
+    if (!name) return;
+    this.setState({subjects: this.state.subjects.concat([{name, teacher:'—', count:0, last:'—'}])});
+  };
+  renderVals(){
+    const v = this.state.view;
+    const dot = (state) => {
+      const base = 'width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;flex-shrink:0;';
+      if (state==='done') return base+'background:oklch(0.93 0.05 150);color:oklch(0.45 0.12 150);';
+      if (state==='active') return base+'background:oklch(0.95 0.03 270);color:oklch(0.45 0.17 270);animation:blink 1s infinite;';
+      return base+'background:#f1efe9;color:#c9c4b8;';
+    };
+    const chip = (s) => 'display:inline-block;padding:3px 10px;border-radius:99px;font-size:12px;font-weight:600;' +
+      (s==='done' ? 'background:oklch(0.93 0.05 150);color:oklch(0.4 0.12 150);' : 'background:oklch(0.93 0.05 25);color:oklch(0.45 0.15 25);');
+    const messages = this.state.messages.map(m => {
+      if (m.kind==='pipeline') return {isPipeline:true, title:m.title, steps: m.steps.map(s => ({
+        name:s.name, note:s.note,
+        dotChar: s.state==='done' ? '✓' : (s.state==='active' ? '●' : '·'),
+        dotStyle: dot(s.state),
+        textStyle: 'font-size:13.5px;' + (s.state==='pending' ? 'color:#c9c4b8;' : s.state==='active' ? 'font-weight:600;' : 'color:#4a463d;'),
+      }))};
+      if (m.kind==='result') return {isResult:true, ...m};
+      return {isUser:true, ...m};
+    });
+    const {fSubject, fPeriod, fStatus, fType} = this.state;
+    const rows = this.state.history.filter(h =>
+      (fSubject==='all' || h.subject===fSubject) &&
+      (fPeriod==='all' || h.days <= Number(fPeriod)) &&
+      (fStatus==='all' || h.status===fStatus) &&
+      (fType==='all' || h.type===fType)
+    ).map(h => ({...h, status: h.status==='done' ? 'Done' : 'Failed', statusStyle: chip(h.status)}));
+    const hasFilters = fSubject!=='all' || fPeriod!=='all' || fStatus!=='all' || fType!=='all';
+    return {
+      isChat: v==='chat', isSubjects: v==='subjects', isHistory: v==='history',
+      navChatStyle: this.navStyle(v==='chat'), navSubjectsStyle: this.navStyle(v==='subjects'), navHistoryStyle: this.navStyle(v==='history'),
+      goChat: () => this.nav('chat'), goSubjects: () => this.nav('subjects'), goHistory: () => this.nav('history'),
+      subjects: this.state.subjects.map(s => ({...s, open: () => this.nav('history', s.name)})),
+      subjectOptions: this.state.subjects,
+      messages,
+      historyRows: rows,
+      noResults: rows.length === 0,
+      resultCount: rows.length + (rows.length === 1 ? ' task' : ' tasks'),
+      filterSubjectVal: fSubject, filterPeriodVal: fPeriod,
+      setFilterSubject: (e) => this.setState({fSubject: e.target.value}),
+      setFilterPeriod: (e) => this.setState({fPeriod: e.target.value}),
+      statusAll: () => this.setState({fStatus:'all'}), statusDone: () => this.setState({fStatus:'done'}), statusFailed: () => this.setState({fStatus:'failed'}),
+      statusAllStyle: this.pillStyle(fStatus==='all'), statusDoneStyle: this.pillStyle(fStatus==='done'), statusFailedStyle: this.pillStyle(fStatus==='failed'),
+      typeAllF: () => this.setState({fType:'all'}), typeCodeF: () => this.setState({fType:'code'}), typeDocF: () => this.setState({fType:'doc'}),
+      typeAllFStyle: this.pillStyle(fType==='all'), typeCodeFStyle: this.pillStyle(fType==='code'), typeDocFStyle: this.pillStyle(fType==='doc'),
+      hasFilters, clearFilters: () => this.setState({fSubject:'all', fPeriod:'all', fStatus:'all', fType:'all'}),
+      draft: this.state.draft,
+      setDraft: (e) => this.setState({draft: e.target.value}),
+      setSubject: (e) => this.setState({subject: e.target.value}),
+      pickCode: () => this.setState({taskType:'code'}), pickDoc: () => this.setState({taskType:'doc'}),
+      typeCodeStyle: this.typeStyle(this.state.taskType==='code'), typeDocStyle: this.typeStyle(this.state.taskType==='doc'),
+      send: this.send, addSubject: this.addSubject,
+      chatRef: (el) => { this._chatEl = el; },
+    };
+  }
+}
+</script>
+</body>
+</html>

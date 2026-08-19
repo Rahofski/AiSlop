@@ -1,0 +1,26 @@
+# Node
+node_modules/
+dist/
+
+# Python
+__pycache__/
+.venv/
+*.egg-info/
+
+# Env & secrets
+.env
+.env.*
+!.env.example
+
+# Editors / OS
+.vscode/
+.idea/
+Thumbs.db
+.DS_Store
+
+# Build info
+*.tsbuildinfo
+
+# Local dev data
+backend/ai_helper.db
+artifacts/
