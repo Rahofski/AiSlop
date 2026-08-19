@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import { AlertCircle, Sparkles } from 'lucide-react'
+import { AlertCircle, CheckCircle2, Sparkles } from 'lucide-react'
 import { useApp } from '@/lib/store'
 import { formatTime } from '@/lib/format'
 import { Composer } from './composer'
@@ -51,6 +51,22 @@ export function ChatView() {
               }
               if (msg.type === 'pipeline') return <PipelineCard key={msg.id} steps={msg.steps} />
               if (msg.type === 'result') return <ResultCard key={msg.id} artifact={msg.artifact} />
+              if (msg.type === 'done')
+                return (
+                  <div
+                    key={msg.id}
+                    className="flex w-105 max-w-full items-start gap-2.5 rounded-xl border bg-card p-4 text-[13.5px] shadow-xs"
+                  >
+                    <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-success-foreground" />
+                    <div>
+                      <p className="font-semibold">Task completed</p>
+                      <p className="mt-0.5 text-muted-foreground">
+                        Artifact packaging and downloads arrive in the next slice — the pipeline
+                        run itself is real.
+                      </p>
+                    </div>
+                  </div>
+                )
               return (
                 <div
                   key={msg.id}

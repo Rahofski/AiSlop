@@ -6,6 +6,7 @@ export type StepStatus = 'pending' | 'active' | 'done' | 'failed'
 
 export interface PipelineStep {
   id: string
+  idx?: number
   label: string
   status: StepStatus
   note?: string
@@ -27,4 +28,5 @@ export type ChatMessage =
   | { id: string; type: 'user'; text: string; subjectName: string; sentAt: number }
   | { id: string; type: 'pipeline'; steps: PipelineStep[] }
   | { id: string; type: 'result'; artifact: Artifact }
+  | { id: string; type: 'done' }
   | { id: string; type: 'error'; summary: string }

@@ -8,6 +8,17 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 from app.db import get_session
 from app.main import create_app
 from app.models import Base
+from app.queue import get_arq
+
+
+class StubArq:
+    """Records enqueued jobs instead of talking to Redis."""
+
+    def __init__(self) -> None:
+        self.jobs: list[tuple[str, tuple]] = []
+
+    async def enqueue_job(self, name: str, *args) -> None:
+        self.jobs.append((name, args))
 
 
 @pytest.fixture
@@ -23,6 +34,7 @@ async def client(tmp_path: Path) -> AsyncIterator[httpx.AsyncClient]:
 
     app = create_app()
     app.dependency_overrides[get_session] = override_session
+    app.dependency_overrides[get_arq] = lambda: StubArq()
 
     transport = httpx.ASGITransport(app=app)
     async with httpx.AsyncClient(transport=transport, base_url="http://test") as test_client:

@@ -1,15 +1,20 @@
+import asyncio
+import json
 from datetime import UTC, datetime, timedelta
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from arq.connections import ArqRedis
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
+from sse_starlette.sse import EventSourceResponse
 
 from app.auth import get_current_user
 from app.db import get_session
 from app.models import Subject, Task, User
-from app.schemas import TaskCreate, TaskDetailOut, TaskOut
+from app.queue import get_arq, task_channel
+from app.schemas import PipelineStepOut, TaskCreate, TaskDetailOut, TaskOut
 
 router = APIRouter(prefix="/tasks", tags=["tasks"])
 
@@ -78,6 +83,7 @@ async def create_task(
     payload: TaskCreate,
     session: Annotated[AsyncSession, Depends(get_session)],
     user: Annotated[User, Depends(get_current_user)],
+    arq: Annotated[ArqRedis, Depends(get_arq)],
 ) -> TaskOut:
     subject = await session.get(Subject, payload.subject_id)
     if subject is None or subject.user_id != user.id:
@@ -96,5 +102,61 @@ async def create_task(
     session.add(task)
     await session.commit()
     await session.refresh(task)
-    # Job enqueueing into arq arrives with the pipeline core (manual phase).
+    await arq.enqueue_job("run_task", task.id)
     return TaskOut.model_validate(task)
+
+
+@router.get("/{task_id}/events")
+async def task_events(
+    task_id: str,
+    request: Request,
+    session: Annotated[AsyncSession, Depends(get_session)],
+    user: Annotated[User, Depends(get_current_user)],
+) -> EventSourceResponse:
+    stmt = (
+        select(Task)
+        .where(Task.id == task_id, Task.user_id == user.id)
+        .options(selectinload(Task.steps))
+    )
+    task = (await session.execute(stmt)).scalar_one_or_none()
+    if task is None:
+        raise HTTPException(status_code=404, detail="Task not found")
+
+    redis: ArqRedis = request.app.state.arq
+
+    async def event_stream():
+        pubsub = redis.pubsub()
+        await pubsub.subscribe(task_channel(task_id))
+        try:
+            # Snapshot after subscribing so no event falls between the two.
+            snapshot = {
+                "type": "snapshot",
+                "task": {"id": task.id, "status": task.status, "error_summary": task.error_summary},
+                "steps": [
+                    PipelineStepOut.model_validate(step).model_dump() for step in task.steps
+                ],
+            }
+            yield {"event": "snapshot", "data": json.dumps(snapshot)}
+            if task.status in ("done", "failed"):
+                return
+
+            while True:
+                message = await pubsub.get_message(ignore_subscribe_messages=True, timeout=15)
+                if message is None:
+                    yield {"event": "ping", "data": "{}"}
+                    continue
+                raw = message["data"]
+                if isinstance(raw, bytes):
+                    raw = raw.decode()
+                payload = json.loads(raw)
+                yield {"event": payload["type"], "data": raw}
+                if payload["type"] == "task" and payload["status"] in ("done", "failed"):
+                    return
+        except asyncio.CancelledError:
+            # Client closed the connection — normal termination path.
+            raise
+        finally:
+            await pubsub.unsubscribe(task_channel(task_id))
+            await pubsub.aclose()
+
+    return EventSourceResponse(event_stream())

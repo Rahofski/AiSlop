@@ -6,7 +6,8 @@ services:
       POSTGRES_PASSWORD: aihelper
       POSTGRES_DB: aihelper
     ports:
-      - "5432:5432"
+      # 5433 on the host: a local Windows PostgreSQL 17 service occupies 5432.
+      - "5433:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:

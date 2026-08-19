@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { Code2, FileText, Paperclip, Send } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
@@ -31,14 +32,13 @@ const TASKTYPE_BY_KIND: Record<TaskKind, string> = {
 export function Composer() {
   const { data: subjects = [] } = useSubjects()
   const createTask = useCreateTask()
-  const { isRunning, runSimulation } = useApp()
+  const queryClient = useQueryClient()
+  const { isRunning, trackTask } = useApp()
   const [draft, setDraft] = useState('')
   const [kind, setKind] = useState<TaskKind>('code')
-  const [subjectId, setSubjectId] = useState('')
-
-  useEffect(() => {
-    if (subjectId === '' && subjects.length > 0) setSubjectId(subjects[0].id)
-  }, [subjects, subjectId])
+  const [subjectChoice, setSubjectChoice] = useState('')
+  // Fall back to the first subject until the user explicitly picks one.
+  const subjectId = subjectChoice || subjects[0]?.id || ''
 
   const canSubmit =
     draft.trim().length > 0 && subjectId !== '' && !isRunning && !createTask.isPending
@@ -47,8 +47,9 @@ export function Composer() {
     if (!canSubmit) return
     const prompt = draft.trim()
     const subjectName = subjects.find((s) => s.id === subjectId)?.name ?? ''
+    let task
     try {
-      await createTask.mutateAsync({
+      task = await createTask.mutateAsync({
         prompt_text: prompt,
         subject_id: subjectId,
         tasktype_id: TASKTYPE_BY_KIND[kind],
@@ -58,11 +59,14 @@ export function Composer() {
       return
     }
     setDraft('')
-    runSimulation({
+    trackTask({
+      taskId: task.id,
       prompt,
       subjectName,
-      kind,
-      onFinished: () => {},
+      onSettled: () => {
+        queryClient.invalidateQueries({ queryKey: ['tasks'] })
+        queryClient.invalidateQueries({ queryKey: ['subjects'] })
+      },
     })
   }
 
@@ -70,7 +74,7 @@ export function Composer() {
     <div className="border-t bg-sidebar px-6 py-4">
       <div className="mx-auto flex max-w-190 flex-col gap-2.5">
         <div className="flex items-center gap-2.5">
-          <Select value={subjectId} onValueChange={setSubjectId}>
+          <Select value={subjectId} onValueChange={setSubjectChoice}>
             <SelectTrigger size="sm" className="bg-card">
               <SelectValue placeholder={subjects.length === 0 ? 'Add a subject first' : 'Subject'} />
             </SelectTrigger>
